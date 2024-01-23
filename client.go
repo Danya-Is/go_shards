@@ -45,12 +45,6 @@ const clientContent = `
 					method: 'POST',
 					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 				})
-					.then(response => response.json())
-					.then(data => {
-						if (data.success) {
-							addLog("New data " + " added")
-						}
-					})
 					.catch(error => console.error('Error:', error));
 			}
 
@@ -83,6 +77,24 @@ const clientContent = `
 					.catch(error => console.error('Error:', error));
 			}
 
+			function getLogRecord() {
+				fetch('/get-log-record', { method: 'GET' })
+					.then(response => response.json())
+					.then(data => {
+						if (data.success) {
+							const basketDiv = document.querySelector('div[data-basketid="' + data.shardId + '"]');
+							// Добавляем класс для подсветки на две секунды
+							basketDiv.classList.add('highlight');
+							setTimeout(() => {
+								// Удаляем класс подсветки после двух секунд
+								basketDiv.classList.remove('highlight');
+							}, 1000);
+							addLog("File " + data.fileId + " was added to " + data.shardId)
+						}
+					})
+					.catch(error => console.error('Error:', error));
+			}
+
 			function initBaskets() {
 				fetch('/init', { method: 'POST' })
 					.then(response => response.json())
@@ -105,5 +117,11 @@ const clientContent = `
 			// Инициализация при загрузке страницы
 			initBaskets();
 
+			const t = setInterval(function() { getLogRecord() }, 2000)
+			
+			setTimeout(() => {
+				console.log("Clear interval")
+				clearInterval(t)
+			}, 60000);
 		</script>
 	`

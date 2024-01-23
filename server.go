@@ -39,12 +39,12 @@ func (server *Server) shardId(virtualShardId int, shardAmount int) int {
 }
 
 func (server *Server) addFile(fileId int) {
+	server.fileMap[fileId] = time.Now()
 	server.fileLog = append(server.fileLog,
 		FileLogRecord{
 			fileId:  fileId,
 			shardId: server.shardId(server.hashFunc(fileId), server.state.currentShardAmount),
 		})
-	server.fileMap[fileId] = time.Now()
 	log.Printf("File %d_%s added", fileId, server.fileMap[fileId].String())
 }
 

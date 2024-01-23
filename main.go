@@ -158,21 +158,28 @@ func (server *Server) addShardHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (server *Server) getLogRecordHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("Got GET_LOG_RECORD request")
+
 	var logRecord FileLogRecord
+	var success = true
+
 	if len(server.fileLog) > 0 {
 		logRecord = server.fileLog[0]
 		server.fileLog = server.fileLog[1:]
 	} else {
 		logRecord = FileLogRecord{-1, -1}
+		success = false
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(
 		map[string]interface{}{
-			"success": true,
+			"success": success,
 			"fileId":  logRecord.fileId,
 			"shardId": logRecord.shardId,
 		})
+
+	log.Printf("shardId=%d", logRecord.shardId)
 }
 
 func main() {

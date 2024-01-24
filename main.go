@@ -1,38 +1,67 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 )
 
-//type initRequest struct {
-//	maxVirtualShardAmount int
-//}
-//
-//type addFilesRequest struct {
-//	fileAmount int
-//}
+//	type initRequest struct {
+//		maxVirtualShardAmount int
+//	}
+type addFilesRequest struct {
+	SourceFileName string `json:"source_file_name"`
+}
+
 //
 //type getFileRequest struct {
 //	fileId  int
 //	addTime time.Time
 //}
 
-// func decodeRequestBody(w http.ResponseWriter, r *http.Request, body interface{}) {
-// 	err := decodeJSONBody(w, r, &body)
-// 	if err != nil {
-//         var mr *malformedRequest
-//         if errors.As(err, &mr) {
-//             http.Error(w, mr.msg, mr.status)
-//         } else {
-//             http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-//         }
-//         return
-//     }
-// }
+func decodeRequestBody(w *http.ResponseWriter, r *http.Request, body interface{}) bool {
+	err := decodeJSONBody(*w, r, &body)
+	if err != nil {
+		var mr *malformedRequest
+		if errors.As(err, &mr) {
+			http.Error(*w, mr.msg, mr.status)
+		} else {
+			http.Error(*w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		}
+		return false
+	}
+	return true
+}
+
+func readIdsFromFile(filePath string) ([]int, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	var ids []int
+	for scanner.Scan() {
+		line := scanner.Text()
+		num, err := strconv.Atoi(line)
+		if err != nil {
+			return nil, err
+		}
+		ids = append(ids, num)
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return ids, nil
+}
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	// Отображение текущих данных о корзинах
@@ -82,11 +111,22 @@ func (server *Server) initHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (server *Server) addFilesHandler(w http.ResponseWriter, r *http.Request) {
-	// var requestData addFilesRequest
-	// decodeRequestBody(w, r, &requestData)
-	log.Println("Got ADD_FILES request")
+	var body []byte
+	r.Body.Read(body)
+	log.Printf("Got ADD_FILES request %s", string(body))
 
-	server.AddFiles(1)
+	var requestData addFilesRequest
+	if ok := decodeRequestBody(&w, r, &requestData); !ok {
+		return
+	}
+
+	fileIds, err := readIdsFromFile(requestData.SourceFileName)
+	if err != nil {
+		log.Fatal(err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	server.AddFiles(fileIds)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{"success": true})
@@ -95,7 +135,7 @@ func (server *Server) addFilesHandler(w http.ResponseWriter, r *http.Request) {
 func (server *Server) getFileHandler(w http.ResponseWriter, r *http.Request) {
 	// var requestData getFileRequest
 	// decodeRequestBody(w, r, &requestData)
-	log.Println("Got GET_FILES request")
+	log.Println("Got GET_FILE request")
 
 	const timeFormat = "2006-01-02T15:04:05.000Z"
 
@@ -158,8 +198,6 @@ func (server *Server) addShardHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (server *Server) getLogRecordHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("Got GET_LOG_RECORD request")
-
 	var logRecord FileLogRecord
 	var success = true
 
@@ -178,8 +216,6 @@ func (server *Server) getLogRecordHandler(w http.ResponseWriter, r *http.Request
 			"fileId":  logRecord.fileId,
 			"shardId": logRecord.shardId,
 		})
-
-	log.Printf("shardId=%d", logRecord.shardId)
 }
 
 func main() {

@@ -52,11 +52,11 @@ func (server *Server) Init(maxVirtualShardAmount int) {
 	server.maxVirtualShardAmount = maxVirtualShardAmount
 }
 
-func (server *Server) AddFiles(n int) {
-	for i := 0; i < n; i++ {
-		server.addFile(server.lastFileId + i + 1)
+func (server *Server) AddFiles(fileIds []int) {
+	for _, fileId := range fileIds {
+		server.addFile(fileId)
 	}
-	server.lastFileId += n
+	server.lastFileId += len(fileIds)
 }
 
 // AddShard todo add n shards

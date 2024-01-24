@@ -9,6 +9,8 @@ const clientContent = `
 			.highlight  { background-color:yellow; }
 		</style>
 		<script>
+			const idsFilePath = 'ids.txt'
+			
 			function getBasketElement(basketNumber) {
 				const basketDiv = document.createElement('div');
 				basketDiv.class = 'basket';
@@ -43,7 +45,8 @@ const clientContent = `
 
 				fetch('/add-data', {
 					method: 'POST',
-					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({'source_file_name': idsFilePath})
 				})
 					.catch(error => console.error('Error:', error));
 			}
